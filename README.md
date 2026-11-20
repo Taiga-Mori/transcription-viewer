@@ -4,7 +4,7 @@ A single-file, browser-based viewer that plays a video side by side with its tra
 
 No installation needed: open `transcription-viewer.html` in a browser (Chrome, Edge or Safari) on macOS or Windows.
 
-![Viewer](docs/viewer.png)
+![Viewer](docs/viewer-screenshot.png)
 
 ## Quick start
 
