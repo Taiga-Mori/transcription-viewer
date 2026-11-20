@@ -44,6 +44,7 @@ B,2.9,3.6,Mostly.
 - **Playback:** play/pause, ±10 s, a seek bar, and playback speed.
 - **Range playback:** enter a start and end time, or fill them from the current position (**Now**) or the visible block (**Whole context**). Then press **Play range**, and tick **Repeat** to loop it. With Repeat on and no range playing, the whole video loops.
 - **Transcript interaction:** click an utterance to jump to it, or double-click it to play just that utterance.
+- **Marking:** click the narrow margin to the left of the speaker name to mark an utterance with an arrow (→). Click it again to remove the mark. Marks are kept only while the page is open.
 - **Layout:** drag the borders between the video, the control panel and the transcript to resize them. Double-click a border or press **Reset layout** to restore the default sizes.
 - **Context length and font size:** adjust them in the **View** row of the control panel (defaults: 10 utterances, 15 px).
 - **Theme:** Auto (follows the OS), Light or Dark.
