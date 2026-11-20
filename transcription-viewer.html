@@ -112,6 +112,11 @@
   .utt.active { background: var(--hl); border-left-color: var(--hl-border); }
   .utt.done { color: var(--muted); }
   .spk { flex: 0 0 auto; font-weight: 600; min-width: 2.5em; }
+  .mark { flex: 0 0 1em; text-align: center; font-weight: 700; color: var(--accent); margin-right: -4px; border-radius: 4px; }
+  .mark::before { content: "→"; visibility: hidden; }
+  .utt:hover .mark::before { visibility: visible; opacity: .25; }
+  .utt.marked .mark::before { visibility: visible; opacity: 1; }
+  .mark:hover { background: var(--hover); }
   .txt { flex: 1; overflow-wrap: anywhere; }
   #footHint { padding: 6px 12px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); }
 </style>
@@ -213,7 +218,7 @@
       <span id="ctxLabel"></span>
       <button id="nextCtx">Next ▶</button>
     </div>
-    <div id="footHint">Click: jump to utterance / Double-click: play that utterance / Space: play/pause / ← →: 10s</div>
+    <div id="footHint">Left margin: mark / Click: jump to utterance / Double-click: play that utterance / Space: play/pause / ← →: 10s</div>
   </div>
 </div>
 
@@ -701,10 +706,18 @@ function renderPage(p) {
   for (let i = from; i < to; i++) {
     const u = utts[i];
     const div = document.createElement("div");
-    div.className = "utt";
+    div.className = "utt" + (u.marked ? " marked" : "");
     div.dataset.i = i;
-    div.innerHTML = `<span class="spk" style="color:${speakerColors[u.speaker]}">${escapeHTML(u.speaker)}</span>` +
+    div.innerHTML = `<span class="mark" title="Click to mark / unmark"></span>` +
+                    `<span class="spk" style="color:${speakerColors[u.speaker]}">${escapeHTML(u.speaker)}</span>` +
                     `<span class="txt">${escapeHTML(u.text)}</span>`;
+    const mark = div.querySelector(".mark");
+    mark.addEventListener("click", e => {
+      e.stopPropagation();
+      u.marked = !u.marked;
+      div.classList.toggle("marked", u.marked);
+    });
+    mark.addEventListener("dblclick", e => e.stopPropagation());
     div.addEventListener("click", () => { rangeActive = false; video.currentTime = u.start; });
     div.addEventListener("dblclick", () => {
       $("rStart").value = fmt(u.start); $("rEnd").value = fmt(u.end); playRange();
