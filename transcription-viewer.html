@@ -100,10 +100,9 @@
   body.dragging video { pointer-events: none; }
 
   #right { flex: 1 1 0; display: flex; flex-direction: column; }
-  #ctxHeader { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  #ctxNav { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--border); }
   #ctxLabel { flex: 1; color: var(--muted); font-size: 13px; text-align: center; white-space: nowrap; }
-  #viewOpts { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; padding: 6px 12px; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--muted); }
-  .stepper { display: flex; align-items: center; gap: 4px; }
+  .stepper { display: flex; align-items: center; gap: 4px; font-size: 13px; color: var(--muted); }
   .stepper button { padding: 2px 9px; }
   .stepper .val { min-width: 40px; text-align: center; font-variant-numeric: tabular-nums; color: var(--text); }
   .stepper input.val { width: 52px; padding: 3px 4px; }
@@ -191,6 +190,14 @@
         <span class="paneTitle">View</span>
         <button class="themeBtn" title="Switch theme (Auto / Light / Dark)"></button>
         <button id="resetLayout" title="Reset panel sizes">Reset layout</button>
+        <span class="stepper" title="Number of utterances shown at once">
+          Context
+          <button id="ctxDown">−</button><input type="number" class="val" id="ctxLen" min="1" max="200"><button id="ctxUp">+</button>
+        </span>
+        <span class="stepper" title="Transcript font size">
+          Font
+          <button id="fontDown">A−</button><span class="val" id="fontSizeLabel"></span><button id="fontUp">A+</button>
+        </span>
         <span style="flex:1"></span>
         <button id="backToSetup">Back to setup</button>
       </div>
@@ -200,23 +207,12 @@
   <div class="splitter v" id="splitV" title="Drag to resize (double-click to reset)"></div>
 
   <div id="right" class="pane">
-    <div id="ctxHeader">
+    <div id="transcript"></div>
+    <div id="ctxNav">
       <button id="prevCtx">◀ Prev</button>
       <span id="ctxLabel"></span>
       <button id="nextCtx">Next ▶</button>
     </div>
-    <div id="viewOpts">
-      <span class="stepper" title="Number of utterances shown at once">
-        Context
-        <button id="ctxDown">−</button><input type="number" class="val" id="ctxLen" min="1" max="200"><button id="ctxUp">+</button>
-        utterances
-      </span>
-      <span class="stepper" title="Transcript font size">
-        Font
-        <button id="fontDown">A−</button><span class="val" id="fontSizeLabel"></span><button id="fontUp">A+</button>
-      </span>
-    </div>
-    <div id="transcript"></div>
     <div id="footHint">Click: jump to utterance / Double-click: play that utterance / Space: play/pause / ← →: 10s</div>
   </div>
 </div>

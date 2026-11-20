@@ -2,13 +2,13 @@
 
 A single-file, browser-based viewer that plays a video side by side with its transcript and highlights the utterance being spoken right now.
 
-No installation needed: open `viewer.html` in a browser (Chrome, Edge or Safari) on macOS or Windows.
+No installation needed: open `transcription-viewer.html` in a browser (Chrome, Edge or Safari) on macOS or Windows.
 
 ![Viewer](docs/viewer.png)
 
 ## Quick start
 
-1. Open `viewer.html` (double-click it).
+1. Open `transcription-viewer.html` (double-click it).
 2. Choose a video file and a transcript CSV.
 3. Check the column mapping and time format (both are detected automatically) and press **Start**.
 
@@ -40,12 +40,12 @@ B,2.9,3.6,Mostly.
 
 ## Viewer
 
-- **Transcript context:** the transcript shows a fixed block of *N* utterances (the context length). When playback moves past the block, the next block replaces it. **Prev / Next** moves between blocks. Utterances being spoken are highlighted, and those already finished are dimmed.
+- **Transcript context:** the transcript shows a fixed block of *N* utterances (the context length). When playback moves past the block, the next block replaces it. **Prev / Next** below the transcript moves between blocks. Utterances being spoken are highlighted, and those already finished are dimmed.
 - **Playback:** play/pause, ±10 s, a seek bar, and playback speed.
 - **Range playback:** enter a start and end time, or fill them from the current position (**Now**) or the visible block (**Whole context**). Then press **Play range**, and tick **Repeat** to loop it. With Repeat on and no range playing, the whole video loops.
 - **Transcript interaction:** click an utterance to jump to it, or double-click it to play just that utterance.
 - **Layout:** drag the borders between the video, the control panel and the transcript to resize them. Double-click a border or press **Reset layout** to restore the default sizes.
-- **Context length and font size:** adjust them above the transcript (defaults: 10 utterances, 15 px).
+- **Context length and font size:** adjust them in the **View** row of the control panel (defaults: 10 utterances, 15 px).
 - **Theme:** Auto (follows the OS), Light or Dark.
 - Layout, context length, font size and theme are remembered by the browser.
 
