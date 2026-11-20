@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transcription Viewer</title>
+<style>
+  :root {
+    --bg: #f6f6f4; --panel: #ffffff; --text: #1d1d1f; --muted: #6e6e73;
+    --border: #d9d9dc; --accent: #2f6fdb; --hl: #fff2b3; --hl-border: #e0b400;
+    --input-bg: #ffffff; --hover: #f2f4f8; --error: #c62828;
+    --spk0: #1f6fd1; --spk1: #d1495b; --spk2: #2a8a52; --spk3: #8e44ad;
+    --spk4: #c26a00; --spk5: #00838f; --spk6: #6d4c41; --spk7: #c2185b;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+    --bg: #16171a; --panel: #1f2125; --text: #e8e8ea; --muted: #9a9ba1;
+    --border: #3a3c42; --accent: #4c8dff; --hl: #4a3f12; --hl-border: #e0b400;
+    --input-bg: #26282d; --hover: #2a2d33; --error: #ff7b7b;
+    --spk0: #7fb0ff; --spk1: #ff8a9a; --spk2: #6fd39a; --spk3: #c9a0ff;
+    --spk4: #ffb260; --spk5: #5fd4de; --spk6: #d4a98f; --spk7: #ff86bd;
+    color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #16171a; --panel: #1f2125; --text: #e8e8ea; --muted: #9a9ba1;
+    --border: #3a3c42; --accent: #4c8dff; --hl: #4a3f12; --hl-border: #e0b400;
+    --input-bg: #26282d; --hover: #2a2d33; --error: #ff7b7b;
+    --spk0: #7fb0ff; --spk1: #ff8a9a; --spk2: #6fd39a; --spk3: #c9a0ff;
+    --spk4: #ffb260; --spk5: #5fd4de; --spk6: #d4a98f; --spk7: #ff86bd;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, "Segoe UI", "Hiragino Sans", "Yu Gothic UI", "Meiryo", sans-serif;
+    font-size: 15px;
+  }
+  button, input, select { font: inherit; color: var(--text); }
+  button {
+    padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px;
+    background: var(--panel); cursor: pointer;
+  }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); color: #fff !important; border-color: var(--accent); }
+  button:disabled { opacity: .5; cursor: default; }
+  input[type=number], input[type=text], select {
+    padding: 5px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--input-bg);
+  }
+
+  /* ---------- 設定画面 ---------- */
+  #setup { max-width: 640px; margin: 40px auto; padding: 0 16px; }
+  #setup h1 { font-size: 22px; margin: 0 0 20px; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; margin-bottom: 14px; }
+  .card h2 { font-size: 15px; margin: 0 0 12px; }
+  .row { display: flex; align-items: center; gap: 10px; margin: 8px 0; flex-wrap: wrap; }
+  .row label.k { width: 130px; color: var(--muted); }
+  .fileBtn { padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--input-bg); cursor: pointer; }
+  .fileBtn:hover { border-color: var(--accent); }
+  .fileName { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+  .hint { color: var(--muted); font-size: 13px; }
+  #preview { font-size: 13px; border-collapse: collapse; margin-top: 10px; width: 100%; }
+  #preview td { border-top: 1px solid var(--border); padding: 3px 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
+  #error { color: var(--error); margin: 10px 0; white-space: pre-wrap; }
+
+  /* ---------- ビューアー ---------- */
+  #viewer { display: none; height: 100vh; }
+  #viewer.on { display: flex; }
+  #left { flex: 3 1 0; display: flex; flex-direction: column; padding: 12px; gap: 10px; min-width: 0; }
+  #videoWrap { flex: 1 1 auto; min-height: 0; background: #000; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+  video { max-width: 100%; max-height: 100%; }
+  .controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  #clock { font-variant-numeric: tabular-nums; color: var(--muted); min-width: 130px; }
+  #seek { flex: 1 1 200px; }
+  .rangeBox { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+  .rangeBox input[type=text] { width: 90px; }
+
+  #right { flex: 2 1 0; display: flex; flex-direction: column; border-left: 1px solid var(--border); background: var(--panel); min-width: 0; }
+  #ctxHeader { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+  #ctxLabel { flex: 1; color: var(--muted); font-size: 13px; text-align: center; }
+  #transcript { flex: 1; overflow-y: auto; padding: 8px 12px; }
+  .utt { display: flex; gap: 10px; padding: 8px 10px; margin: 4px 0; border-radius: 6px; border-left: 4px solid transparent; cursor: pointer; line-height: 1.6; }
+  .utt:hover { background: var(--hover); }
+  .utt.active { background: var(--hl); border-left-color: var(--hl-border); }
+  .utt.done { color: var(--muted); }
+  .spk { flex: 0 0 auto; font-weight: 600; min-width: 2.5em; }
+  .txt { flex: 1; word-break: break-all; }
+  #footHint { padding: 6px 12px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); }
+</style>
+</head>
+<body>
+
+<!-- ================= 設定画面 ================= -->
+<div id="setup">
+  <div class="row" style="justify-content:space-between;margin-bottom:20px">
+    <h1 style="margin:0">Transcription Viewer</h1>
+    <button class="themeBtn" title="Switch theme (Auto / Light / Dark)"></button>
+  </div>
+
+  <div class="card">
+    <h2>1. Files</h2>
+    <div class="row"><label class="k">Video</label><label class="fileBtn"><input type="file" id="videoFile" accept="video/*,.mp4,.mov,.webm,.m4v" hidden>Choose file…</label><span class="fileName" data-for="videoFile">No file chosen</span></div>
+    <div class="row"><label class="k">Transcript CSV</label><label class="fileBtn"><input type="file" id="csvFile" accept=".csv,.tsv,.txt,text/csv" hidden>Choose file…</label><span class="fileName" data-for="csvFile">No file chosen</span></div>
+  </div>
+
+  <div class="card">
+    <h2>2. Column mapping</h2>
+    <div class="row"><label class="k"></label><label><input type="checkbox" id="hasHeader" checked> First row is a header</label></div>
+    <div class="row"><label class="k">Speaker</label><select id="colSpeaker"></select></div>
+    <div class="row"><label class="k">Start time</label><select id="colStart"></select></div>
+    <div class="row"><label class="k">End time</label><select id="colEnd"></select></div>
+    <div class="row"><label class="k">Utterance</label><select id="colText"></select></div>
+    <div class="row"><label class="k">Time unit</label>
+      <select id="timeUnit">
+        <option value="s">Seconds (or hh:mm:ss.sss)</option>
+        <option value="ms">Milliseconds</option>
+      </select>
+    </div>
+    <table id="preview"></table>
+  </div>
+
+  <div class="card">
+    <h2>3. Display</h2>
+    <div class="row"><label class="k">Context length</label><input type="number" id="ctxLen" value="10" min="1" style="width:80px"> utterances</div>
+  </div>
+
+  <div id="error"></div>
+  <button class="primary" id="startBtn" disabled>Start</button>
+</div>
+
+<!-- ================= ビューアー ================= -->
+<div id="viewer">
+  <div id="left">
+    <div id="videoWrap"><video id="video" playsinline></video></div>
+
+    <div class="controls">
+      <button id="back10">« 10s</button>
+      <button id="playBtn" class="primary" style="min-width:80px">▶ Play</button>
+      <button id="fwd10">10s »</button>
+      <input type="range" id="seek" min="0" max="1000" value="0">
+      <span id="clock">0:00 / 0:00</span>
+      <select id="rate" title="Playback speed">
+        <option value="0.5">0.5x</option><option value="0.75">0.75x</option>
+        <option value="1" selected>1x</option><option value="1.25">1.25x</option>
+        <option value="1.5">1.5x</option><option value="2">2x</option>
+      </select>
+    </div>
+
+    <div class="controls rangeBox">
+      <span>Range</span>
+      <input type="text" id="rStart" placeholder="start 0:00">
+      <button id="rStartNow" title="Set start to current position">⇤ Now</button>
+      –
+      <input type="text" id="rEnd" placeholder="end 0:10">
+      <button id="rEndNow" title="Set end to current position">⇥ Now</button>
+      <button id="rCtx" title="Set range to the whole visible context">Whole context</button>
+      <button id="rPlay" class="primary">Play range</button>
+      <label><input type="checkbox" id="loop"> Repeat</label>
+      <span style="flex:1"></span>
+      <button class="themeBtn" title="Switch theme (Auto / Light / Dark)"></button>
+      <button id="backToSetup">Back to setup</button>
+    </div>
+  </div>
+
+  <div id="right">
+    <div id="ctxHeader">
+      <button id="prevCtx">◀ Prev</button>
+      <span id="ctxLabel"></span>
+      <button id="nextCtx">Next ▶</button>
+    </div>
+    <div id="transcript"></div>
+    <div id="footHint">Click: jump to utterance / Double-click: play that utterance / Space: play/pause / ← →: 10s</div>
+  </div>
+</div>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+
+// ---------------------------------------------------------------- CSV
+function parseCSV(text) {
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  const firstLine = text.split(/\r?\n/, 1)[0];
+  const delim = (firstLine.split("\t").length > firstLine.split(",").length) ? "\t" : ",";
+  const rows = []; let row = []; let field = ""; let q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) {
+      if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else q = false; }
+      else field += c;
+    } else if (c === '"') q = true;
+    else if (c === delim) { row.push(field); field = ""; }
+    else if (c === "\n" || c === "\r") {
+      if (c === "\r" && text[i + 1] === "\n") i++;
+      row.push(field); field = "";
+      if (row.length > 1 || row[0] !== "") rows.push(row);
+      row = [];
+    } else field += c;
+  }
+  row.push(field);
+  if (row.length > 1 || row[0] !== "") rows.push(row);
+  return rows;
+}
+
+async function readText(file) {
+  const buf = await file.arrayBuffer();
+  try { return new TextDecoder("utf-8", { fatal: true }).decode(buf); }
+  catch { return new TextDecoder("shift_jis").decode(buf); }   // Windows Excel 由来の CSV
+}
+
+function parseTime(v, unit) {
+  v = String(v).trim();
+  if (v === "") return NaN;
+  if (v.includes(":")) {
+    return v.split(":").reduce((acc, p) => acc * 60 + parseFloat(p), 0);
+  }
+  const n = parseFloat(v);
+  return unit === "ms" ? n / 1000 : n;
+}
+
+function fmt(sec) {
+  if (!isFinite(sec)) sec = 0;
+  sec = Math.max(0, sec);
+  const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60;
+  const ss = s.toFixed(1).padStart(4, "0");
+  return h ? `${h}:${String(m).padStart(2, "0")}:${ss}` : `${m}:${ss}`;
+}
+
+// ---------------------------------------------------------------- 設定画面
+let csvRows = null;
+let videoURL = null;
+const colSelects = ["colSpeaker", "colStart", "colEnd", "colText"];
+const guesses = {
+  colSpeaker: /speaker|話者|tier|participant|spk|name/i,
+  colStart: /start|begin|開始|from|onset/i,
+  colEnd: /end|終了|stop|to$|offset/i,
+  colText: /text|発話|utterance|transcript|内容|content|value/i,
+};
+
+function refreshColumns() {
+  if (!csvRows || !csvRows.length) return;
+  const hasHeader = $("hasHeader").checked;
+  const ncol = Math.max(...csvRows.slice(0, 20).map(r => r.length));
+  const names = [];
+  for (let i = 0; i < ncol; i++) {
+    const h = hasHeader ? (csvRows[0][i] || "").trim() : "";
+    names.push(`Column ${i + 1}` + (h ? `: ${h}` : ""));
+  }
+  const used = new Set();
+  colSelects.forEach((id, k) => {
+    const sel = $(id);
+    sel.innerHTML = names.map((n, i) => `<option value="${i}">${escapeHTML(n)}</option>`).join("");
+    let pick = -1;
+    if (hasHeader) pick = csvRows[0].findIndex((h, i) => !used.has(i) && guesses[id].test(h || ""));
+    if (pick < 0) pick = Math.min(k, ncol - 1);   // 既定は 話者,開始,終了,発話 の順
+    used.add(pick);
+    sel.value = pick;
+  });
+  const body = csvRows.slice(0, hasHeader ? 6 : 5);
+  $("preview").innerHTML = body.map((r, i) =>
+    `<tr style="${hasHeader && i === 0 ? "font-weight:600" : ""}">` +
+    r.map(c => `<td>${escapeHTML(c)}</td>`).join("") + "</tr>").join("");
+  validateSetup();
+}
+
+function validateSetup() { $("startBtn").disabled = !(csvRows && videoURL); }
+
+$("videoFile").addEventListener("change", (e) => {
+  const f = e.target.files[0];
+  if (videoURL) URL.revokeObjectURL(videoURL);
+  videoURL = f ? URL.createObjectURL(f) : null;
+  validateSetup();
+});
+$("csvFile").addEventListener("change", async (e) => {
+  const f = e.target.files[0];
+  $("error").textContent = "";
+  csvRows = null;
+  if (f) {
+    try { csvRows = parseCSV(await readText(f)); }
+    catch (err) { $("error").textContent = "Could not read the CSV: " + err; }
+  }
+  refreshColumns();
+  validateSetup();
+});
+$("hasHeader").addEventListener("change", refreshColumns);
+document.querySelectorAll(".fileName").forEach(span => {
+  $(span.dataset.for).addEventListener("change", e => {
+    span.textContent = e.target.files[0] ? e.target.files[0].name : "No file chosen";
+  });
+});
+
+// ---------------------------------------------------------------- ビューアー状態
+let utts = [];          // {speaker, start, end, text}
+let ctxLen = 10;
+let curPage = -1;
+let rangeActive = false;
+const video = $("video");
+const speakerColors = {};
+const palette = [0, 1, 2, 3, 4, 5, 6, 7].map(i => `var(--spk${i})`);   // テーマごとに CSS で定義
+
+// テーマ: auto（OS に従う）→ light → dark
+const THEMES = ["auto", "light", "dark"];
+const THEME_LABEL = { auto: "◐ Auto", light: "☀ Light", dark: "☾ Dark" };
+let theme = "auto";
+try { theme = localStorage.getItem("tv-theme") || "auto"; } catch {}
+function applyTheme() {
+  if (theme === "auto") document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.setAttribute("data-theme", theme);
+  document.querySelectorAll(".themeBtn").forEach(b => b.textContent = THEME_LABEL[theme]);
+}
+document.querySelectorAll(".themeBtn").forEach(b => b.addEventListener("click", () => {
+  theme = THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length];
+  try { localStorage.setItem("tv-theme", theme); } catch {}
+  applyTheme();
+}));
+applyTheme();
+
+$("startBtn").addEventListener("click", () => {
+  const hasHeader = $("hasHeader").checked;
+  const unit = $("timeUnit").value;
+  const [cs, cb, ce, ct] = colSelects.map(id => +$(id).value);
+  const data = hasHeader ? csvRows.slice(1) : csvRows;
+  let bad = 0;
+  utts = [];
+  for (const r of data) {
+    const start = parseTime(r[cb] ?? "", unit), end = parseTime(r[ce] ?? "", unit);
+    if (!isFinite(start) || !isFinite(end)) { bad++; continue; }
+    utts.push({ speaker: (r[cs] ?? "").trim(), start, end: Math.max(start, end), text: r[ct] ?? "" });
+  }
+  if (!utts.length) {
+    $("error").textContent = "No valid rows. Check the column mapping and time unit.";
+    return;
+  }
+  utts.sort((a, b) => a.start - b.start || a.end - b.end);
+  Object.keys(speakerColors).forEach(k => delete speakerColors[k]);
+  utts.forEach(u => {
+    if (!(u.speaker in speakerColors))
+      speakerColors[u.speaker] = palette[Object.keys(speakerColors).length % palette.length];
+  });
+  ctxLen = Math.max(1, parseInt($("ctxLen").value, 10) || 10);
+  if (bad) console.warn(`Skipped ${bad} rows with unparseable times`);
+
+  video.src = videoURL;
+  $("setup").style.display = "none";
+  $("viewer").classList.add("on");
+  curPage = -1;
+  renderPage(0);
+  tick();
+});
+
+$("backToSetup").addEventListener("click", () => {
+  video.pause();
+  $("viewer").classList.remove("on");
+  $("setup").style.display = "";
+});
+
+// ---------------------------------------------------------------- 書き起こし表示
+const pageCount = () => Math.ceil(utts.length / ctxLen);
+
+function renderPage(p) {
+  p = Math.max(0, Math.min(pageCount() - 1, p));
+  if (p === curPage) return;
+  curPage = p;
+  const from = p * ctxLen, to = Math.min(utts.length, from + ctxLen);
+  const box = $("transcript");
+  box.innerHTML = "";
+  for (let i = from; i < to; i++) {
+    const u = utts[i];
+    const div = document.createElement("div");
+    div.className = "utt";
+    div.dataset.i = i;
+    div.innerHTML = `<span class="spk" style="color:${speakerColors[u.speaker]}">${escapeHTML(u.speaker)}</span>` +
+                    `<span class="txt">${escapeHTML(u.text)}</span>`;
+    div.addEventListener("click", () => { rangeActive = false; video.currentTime = u.start; });
+    div.addEventListener("dblclick", () => {
+      $("rStart").value = fmt(u.start); $("rEnd").value = fmt(u.end); playRange();
+    });
+    box.appendChild(div);
+  }
+  box.scrollTop = 0;
+  $("ctxLabel").textContent = `${p + 1} / ${pageCount()}  (utterances ${from + 1}–${to})`;
+  $("prevCtx").disabled = p === 0;
+  $("nextCtx").disabled = p === pageCount() - 1;
+}
+
+// 時刻 t 以前に始まった最後の発話のインデックス（二分探索）
+function lastStartedIndex(t) {
+  let lo = 0, hi = utts.length - 1, ans = -1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (utts[mid].start <= t) { ans = mid; lo = mid + 1; } else hi = mid - 1;
+  }
+  return ans;
+}
+
+function updateHighlight() {
+  const t = video.currentTime;
+  const idx = lastStartedIndex(t);
+  renderPage(idx < 0 ? 0 : Math.floor(idx / ctxLen));
+  let firstActive = null;
+  for (const el of $("transcript").children) {
+    const u = utts[+el.dataset.i];
+    const active = u.start <= t && t < u.end;
+    el.classList.toggle("active", active);
+    el.classList.toggle("done", !active && u.end <= t);
+    if (active && !firstActive) firstActive = el;
+  }
+  if (firstActive) {
+    const box = $("transcript"), r = firstActive.getBoundingClientRect(), b = box.getBoundingClientRect();
+    if (r.top < b.top || r.bottom > b.bottom) firstActive.scrollIntoView({ block: "nearest" });
+  }
+}
+
+$("prevCtx").addEventListener("click", () => gotoPage(curPage - 1));
+$("nextCtx").addEventListener("click", () => gotoPage(curPage + 1));
+function gotoPage(p) {
+  p = Math.max(0, Math.min(pageCount() - 1, p));
+  rangeActive = false;
+  video.currentTime = utts[p * ctxLen].start;
+}
+
+// ---------------------------------------------------------------- 再生コントロール
+function togglePlay() { video.paused ? video.play() : video.pause(); }
+function skip(d) { video.currentTime = Math.max(0, Math.min(video.duration || 0, video.currentTime + d)); }
+
+$("playBtn").addEventListener("click", togglePlay);
+$("back10").addEventListener("click", () => skip(-10));
+$("fwd10").addEventListener("click", () => skip(10));
+$("rate").addEventListener("change", e => video.playbackRate = +e.target.value);
+video.addEventListener("play", () => $("playBtn").textContent = "❚❚ Pause");
+video.addEventListener("pause", () => $("playBtn").textContent = "▶ Play");
+video.addEventListener("click", togglePlay);
+video.addEventListener("ended", () => {
+  if ($("loop").checked && !rangeActive) { video.currentTime = 0; video.play(); }
+});
+
+let seeking = false;
+$("seek").addEventListener("input", e => {
+  seeking = true;
+  if (video.duration) video.currentTime = e.target.value / 1000 * video.duration;
+});
+$("seek").addEventListener("change", () => seeking = false);
+
+// 区間再生
+function getRange() {
+  const s = parseTime($("rStart").value, "s");
+  let e = parseTime($("rEnd").value, "s");
+  if (!isFinite(s)) return null;
+  if (!isFinite(e)) e = video.duration;
+  return e > s ? { s, e } : null;
+}
+function playRange() {
+  const r = getRange();
+  if (!r) { alert("Enter a valid start and end (e.g. 1:23.5 or 83.5)."); return; }
+  rangeActive = true;
+  video.currentTime = r.s;
+  video.play();
+}
+$("rPlay").addEventListener("click", playRange);
+$("rStartNow").addEventListener("click", () => $("rStart").value = fmt(video.currentTime));
+$("rEndNow").addEventListener("click", () => $("rEnd").value = fmt(video.currentTime));
+$("rCtx").addEventListener("click", () => {
+  const from = curPage * ctxLen, to = Math.min(utts.length, from + ctxLen);
+  $("rStart").value = fmt(utts[from].start);
+  $("rEnd").value = fmt(Math.max(...utts.slice(from, to).map(u => u.end)));
+});
+// 区間外へシークしたら区間再生モードを解除
+video.addEventListener("seeking", () => {
+  if (!rangeActive) return;
+  const r = getRange();
+  if (!r || video.currentTime < r.s - 0.05 || video.currentTime > r.e + 0.05) rangeActive = false;
+});
+
+// 毎フレーム更新
+function tick() {
+  if (rangeActive && !video.paused) {
+    const r = getRange();
+    if (r && video.currentTime >= r.e) {
+      if ($("loop").checked) video.currentTime = r.s;
+      else { video.pause(); rangeActive = false; }
+    }
+  }
+  if (!seeking && video.duration) $("seek").value = video.currentTime / video.duration * 1000;
+  $("clock").textContent = `${fmt(video.currentTime)} / ${fmt(video.duration)}`;
+  if (utts.length) updateHighlight();
+  requestAnimationFrame(tick);
+}
+
+// キーボード
+document.addEventListener("keydown", e => {
+  if (!$("viewer").classList.contains("on")) return;
+  if (["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement.tagName) &&
+      document.activeElement.type !== "range" && document.activeElement.type !== "checkbox") return;
+  if (e.code === "Space") { e.preventDefault(); togglePlay(); }
+  else if (e.key === "ArrowLeft") { e.preventDefault(); skip(-10); }
+  else if (e.key === "ArrowRight") { e.preventDefault(); skip(10); }
+});
+
+function escapeHTML(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+</script>
+</body>
+</html>

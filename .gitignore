@@ -1,0 +1,5 @@
+# 起動に必要な最小限のファイルだけを追跡する
+*
+!.gitignore
+!README.md
+!viewer.html
